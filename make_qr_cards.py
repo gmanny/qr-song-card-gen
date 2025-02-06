@@ -276,6 +276,50 @@ class Table(NamedTuple):
         return "\n".join(parts)
 
 
+def get_track_data_by_id(
+    track_metadata: dict[str, dict[str, Any]],
+    track_id: str,
+    track_set: str | None = None,
+    track_index: int = -1,
+    set_alias: str | None = None,
+) -> tuple[Track, dict[str, Any]] | None:
+    "Returns track data for the given track ID."
+
+    existing_track_data: dict[str, Any] | None = track_metadata.get(track_id)
+    if existing_track_data is None:
+        return None
+
+    if set_alias is not None:
+        set_str = set_alias
+    elif track_set is not None:
+        set_str = track_set
+        if track_index == -1:
+            track_index = existing_track_data["sets"][track_set]
+    else:
+        set_str = ""
+
+    track = Track(
+        release_date=date.fromisoformat(existing_track_data["release_date"]),
+        title=existing_track_data.get(
+            "title_override", existing_track_data["title_clean"]
+        ),
+        artist=existing_track_data.get(
+            "artist_override", existing_track_data["artist"]
+        ),
+        album=existing_track_data.get(
+            "album_override", existing_track_data["album_clean"]
+        ),
+        album_track=int(existing_track_data["album_track"]),
+        track_url=existing_track_data["track_url"],
+        album_url=existing_track_data["album_url"],
+        artist_url=existing_track_data["artist_url"],
+        set=set_str,
+        set_index=track_index,
+    )
+
+    return track, existing_track_data
+
+
 async def main() -> None:
     "Main method"
 
@@ -398,18 +442,20 @@ async def main() -> None:
         track_ids = [line.strip() for line in await file.readlines()]
 
     # Prepare for fuzzy matching
-    exclude_track_data: dict[tuple[str, str], set[str]] = defaultdict(set)
+    exclude_track_data: dict[tuple[str, str], list[tuple[str, set[str]]]] = defaultdict(
+        list
+    )
     if fuzzy_track_dupes and len(skip_if_set) > 0:
-        for track in track_metadata.values():
-            if track["set"] not in skip_if_set:
+        for track_id, track in track_metadata.items():
+            track_sets = set(track["sets"].keys())
+            skipped_track_sets = skip_if_set & track_sets
+            if len(skipped_track_sets) == 0:
                 continue
 
             title = track.get("title_override", track["title_clean"])
             artist = track.get("artist_override", track["artist"])
 
-            exclude_track_data[(title, artist)] |= skip_if_set & set(
-                track["sets"].keys()
-            )
+            exclude_track_data[(title, artist)].append((track_id, skipped_track_sets))
 
     count = 0
     processed_count = 0
@@ -425,10 +471,15 @@ async def main() -> None:
         if set_name is not None and track_set != set_name:
             continue
 
-        existing_track_data: dict[str, Any] | None = track_metadata.get(track_id)
-        if existing_track_data is None:
+        track_data = get_track_data_by_id(
+            track_metadata, track_id, track_set, track_index, set_alias
+        )
+
+        if track_data is None:
             print(f"Track {track_id} not found in database.")
             exit(2)
+
+        track, existing_track_data = track_data
 
         if len(skip_if_set) > 0:
             other_sets = [
@@ -438,33 +489,25 @@ async def main() -> None:
             ]
             if other_sets:
                 print(
-                    f"Skipping track {track_id} because it is also present in the set {other_sets}"
+                    f"Skipping track {track_id} {track.title} - {track.artist} "
+                    f"because it is also present in the set(s) {other_sets}"
                 )
                 continue
 
-        track = Track(
-            release_date=date.fromisoformat(existing_track_data["release_date"]),
-            title=existing_track_data.get(
-                "title_override", existing_track_data["title_clean"]
-            ),
-            artist=existing_track_data.get(
-                "artist_override", existing_track_data["artist"]
-            ),
-            album=existing_track_data.get(
-                "album_override", existing_track_data["album_clean"]
-            ),
-            album_track=int(existing_track_data["album_track"]),
-            track_url=existing_track_data["track_url"],
-            album_url=existing_track_data["album_url"],
-            artist_url=existing_track_data["artist_url"],
-            set=set_alias or track_set or "",
-            set_index=track_index,
-        )
-
         conflicting_sets = exclude_track_data.get((track.title, track.artist))
         if conflicting_sets is not None:
+            match_titles = []
+            for match_track_id, match_skipped_track_sets in conflicting_sets:
+                match_track, _ = get_track_data_by_id(
+                    track_metadata, match_track_id, list(match_skipped_track_sets)[0]
+                )
+                match_title = (
+                    f"track {match_track_id} {match_track.title} - {match_track.artist} "
+                    f"from set(s) {match_skipped_track_sets}"
+                )
+                match_titles.append(match_title)
             print(
-                f"Skipping track {track_id} because it is also present in the set(s) {conflicting_sets}"
+                f"Skipping track {track_id} {track.title} - {track.artist} because it matched {', '.join(match_titles)}"
             )
             continue
 
