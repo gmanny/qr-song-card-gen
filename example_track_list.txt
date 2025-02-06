@@ -1,0 +1,27 @@
+# This is an example track list file. Lines starting with # are ignored.
+# The first column is the Spotify track ID, the second column is the set ID,
+# the third column is the track index in the set. All other columns are ignored,
+# so you can put more information in there if you want or use as a comment.
+2QjOHCTQ1Jl3zawyYOpxh6;slava_vol1;1
+0VjIjW4GlUZAMYd2vXMi3b;slava_vol1;2
+7DSAEUvxU8FajXtRloy8M0;slava_vol1;3
+6RUKPb4LETWmmr3iAEQktW;slava_vol1;4
+1mea3bSkSGXuIRvnydlB5b;slava_vol1;5
+
+# Empty lines are ignored as well.
+
+# Only track ID is required, other columns are optional.
+# You then must use `--set-id` argument when running `fetch_track_metadata.py`.
+2nLtzopw4rPReszdYBJU6h
+60a0Rd6pjrkxjPbaKzXjfq
+0pqnGHJpmpxLKifKRmU6WP
+4xdBrk0nFZaP54vvZj0yx7
+4RvWPyQ5RL0ao9LPZeSouE
+
+# Specifying just the set ID is also valid.
+0d28khcov6AiegSCpG5TuT;slava_vol1
+2LBqCSwhJGcFQeTHMVGwy3;slava_vol1
+3yfqSUWxFvZELEM4PmlwIR;slava_vol1
+32OlwWuMpZ6b0aN2RZOeMS;slava_vol1
+2nMeu6UenVvwUktBCpLMK9;slava_vol1
+

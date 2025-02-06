@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RuffConfigService">
+    <option name="enableLsp" value="false" />
+    <option name="globalRuffExecutablePath" value="C:\Users\gmany\Documents\Dev\packages\pip_user\Python311\Scripts\ruff.exe" />
+    <option name="runRuffOnSave" value="true" />
+    <option name="useRuffFormat" value="true" />
+    <option name="useRuffServer" value="true" />
+  </component>
+</project>
